@@ -1,0 +1,10 @@
+cd /tmp
+tftp -gl i1 192.168.1.9
+tftp -gl i2 192.168.1.9
+tftp -gl busybox 192.168.1.9
+chmod 755 busybox
+./busybox dd if=i1 of=/dev/mtdblock1 conv=fsync
+./busybox dd if=i2 of=/dev/mtdblock2 conv=fsync
+./busybox reboot -f
+echo blaaat
+

